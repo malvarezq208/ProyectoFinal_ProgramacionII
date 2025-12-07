@@ -7,10 +7,10 @@ import pandas as pd
 
 #----------------------------------------------------------------------------------------------------------------------#
 # Clase = ClienteAPI / Instancia para consultar las API's
-#cliente_api = ClienteAPI()
-#cliente_api.coordenadas_paises()
-#cliente_api.clima_anual(2013, lat=10, lon=-84)
-#cliente_api.clima_rango_anios(2013, 2024, lat=10, lon=-84)
+cliente_api = ClienteAPI()
+cliente_api.coordenadas_paises()
+cliente_api.clima_anual(2013, lat=10, lon=-84)
+cliente_api.clima_rango_anios(2013, 2024, lat=10, lon=-84)
 
 #----------------------------------------------------------------------------------------------------------------------#
 # Clase = GestorDatos / Instancia para cargar los datos
