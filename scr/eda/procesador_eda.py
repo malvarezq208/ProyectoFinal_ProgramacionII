@@ -13,13 +13,13 @@ data_processed = os.path.join(base_dir, "data", "processed") # Ruta para guardar
 class ProcesadorEDA: # Clase para realizar EDA en DataFrames de pandas.
     def __init__(self, df: pd.DataFrame): # Constructor de la clase.
         if df.empty: # Si el DataFrame esta vacio.
-            raise ValueError("❌ El DataFrame está vacío al iniciar ProcesadorEDA") # Validacion de DataFrame vacio.
+            raise ValueError('El DataFrame está vacío al iniciar ProcesadorEDA') # Validacion de DataFrame vacio.
         self.df = df.copy() # Copia del DataFrame para evitar modificar el original.
 
 #----------------------------------------------------------------------------------------------------------------------#
 # Metodo #1: Informacion general de los csv.
     def informacion(self):
-        print("📊 Información general del dataset")
+        print('Información general del dataset')
         print(self.df.head()) # Muestra las primeras filas del DataFrame.
         print(self.df.info()) # Muestra informacion del DataFrame.
 
@@ -50,22 +50,22 @@ class ProcesadorEDA: # Clase para realizar EDA en DataFrames de pandas.
                 .str.upper()
             )
 
-        print("✅ Textos limpios correctamente")
+        print('✅Textos limpios correctamente')
 
 #----------------------------------------------------------------------------------------------------------------------#
 # Metodo #3: Este metodo nos ayudara ha saber si existen datos nulos, y al tener que realizar un MODELO ML dejaremos que los NaN sean imputados.
     def datos_nulos(self):
         total = self.df.isnull().sum().sum() # Contamos el total de datos nulos
         if total == 0: # Si no hay datos nulos
-            print("✅ No existen datos nulos")
+            print('No existen datos nulos')
         else: # Si hay datos nulos
-            print("⚠️ Nulos por columna:")
+            print('Nulos por columna:')
             print(self.df.isnull().sum()) # Mostramos los datos nulos por columna
 
 
     def imputar_datos_nulos(self): # Imputacion de datos nulos
         if self.df.isnull().sum().sum() == 0: # Si no hay datos nulos
-            print("✅ No es necesario imputar")
+            print('No es necesario imputar')
             return
 
         for col in self.df.columns: # Imputamos los datos nulos
@@ -74,17 +74,17 @@ class ProcesadorEDA: # Clase para realizar EDA en DataFrames de pandas.
             else: # Si la columna es de texto
                 self.df[col].fillna(self.df[col].mode()[0], inplace=True) # Imputamos con la moda
 
-        print("✅ Datos nulos imputados correctamente")
+        print('✅Datos nulos imputados correctamente')
 
 #----------------------------------------------------------------------------------------------------------------------#
 # Metodo #4: Nos ayuda a eliminar los datos duplicados.
     def eliminar_duplicados(self):
         dup = self.df.duplicated().sum() # Contamos los duplicados
         if dup == 0: # Si no hay duplicados
-            print("✅ No hay duplicados")
+            print('No hay duplicados')
         else: # Si hay duplicados
             self.df.drop_duplicates(inplace=True)
-            print(f"✅ {dup} duplicados eliminados")
+            print(f"✅{dup} duplicados eliminados")
 
 #----------------------------------------------------------------------------------------------------------------------#
 # Metodo #5: Corrige la columa annios del csv turismo.
@@ -100,7 +100,7 @@ class ProcesadorEDA: # Clase para realizar EDA en DataFrames de pandas.
 
             if col_norm in ["COLUMN1", "ICOLUMN1", "ANNIOS", "ANIOS"]: # Posibles nombres de la columna AÑOS
                 self.df.rename(columns={col: "ANNIOS"}, inplace=True) # Renombramos la columna a AÑOS
-                print("✅ Columna AÑOS corregida")
+                print('✅Columna AÑOS corregida')
                 return
 
 #----------------------------------------------------------------------------------------------------------------------#
