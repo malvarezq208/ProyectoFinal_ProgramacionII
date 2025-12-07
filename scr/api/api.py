@@ -6,6 +6,11 @@ import csv  # Lee y escribe los csv.
 import requests  # Consulta a las API's.
 import os  # Manejo de rutas de archivos.
 
+base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")) #Obtiene la ruta raíz del proyecto sin importar desde dónde se ejecute el programa.
+
+data_processed = os.path.join(base_dir, "data", "processed") #construye la ruta completa hacia la carpeta
+#donde se guardarán los archivos CSV procesados (data/processed)
+
 #----------------------------------------------------------------------------------------------------------------------#
 class ClienteAPI():  # Creamos la clase.
     def __init__(self):  # Creamos el constructor
@@ -13,35 +18,46 @@ class ClienteAPI():  # Creamos la clase.
 
 #----------------------------------------------------------------------------------------------------------------------#
 # Metodo #1: Coordenadas de paises.
-    def coordenadas_paises(self,
-                           filename='Coordenadas_Paises.csv'):  # Metodo para obtener las coordenadas de los paises y guardarlas en un csv.
-        url = 'https://restcountries.com/v3.1/all?fields=name,latlng'  # URL de la API.
-        response = requests.get(url)  # Hacemos la peticion a la API.
-        countries = response.json()  # Convertimos la respuesta a formato JSON.
+    def coordenadas_paises(self, filename='Coordenadas_Paises.csv'):  # Metodo para obtener las coordenadas de los paises y guardarlas en un csv.
 
-        carpeta = 'data/processed' # Aqui definimos donde va a ir guardado este csv
-        os.makedirs(carpeta, exist_ok=True) # Si la carpeta no existe, la crea.
+        url = "https://restcountries.com/v3.1/all?fields=name,latlng" # URL de la API para obtener los datos de los paises
+        response = requests.get(url) # Realizar la solicitud GET a la API
+        countries = response.json() # Convertir la respuesta JSON en un diccionario de Python
 
-        ruta = os.path.join(carpeta, filename) # Se une la carpeta mas el nombre del csv.
+        data = []  # Lista para construir el DataFrame
 
-        with open(filename, 'w', newline="", encoding='utf-8') as csvfile:  # Abrimos el archivo CSV para escribir.
-            writer = csv.writer(csvfile)  # Creamos el objeto writer (se usa para escribir datos en archivos (como texto o CSV).
-            writer.writerow(['Pais', 'Latitud', 'Longitud'])  # Escribimos el encabezzado del CSV.
+        for country in countries: # Iterar sobre cada pais en la respuesta
+            name = country["name"]["common"] # Obtener el nombre comun del pais
+            latlng = country.get("latlng", [None, None]) # Obtener las coordenadas latitud y longitud
+            lat, lng = latlng # Asignar latitud y longitud
 
-            for country in countries:  # Iteramos sobre los paises obtenidos de la API.
-                name = country['name']['common']  # Obtenemos el nombre comun del pais.
-                latlng = country.get('latlng', [None, None])  # Obtenemos las coordenadas (latitud y longitud). Si no existen, asignamos [None, None].
-                lat, lng = latlng
-                writer.writerow([name, lat, lng])  # Escribimos una fila en el CSV con el nombre del pais, latitud y longitud.
+            data.append({# Agregar los datos a la lista
+                "Pais": name,
+                "Latitud": lat,
+                "Longitud": lng
+            })
 
-        print(f"Archivo {ruta} creado con éxito ✅")  # Mensaje de que se creo el csv y lo envio a la ruta.
+        # Crear DataFrame
+        df = pd.DataFrame(data)
+
+        # Crear carpeta y ruta
+        os.makedirs(data_processed, exist_ok=True) # Crear la carpeta si no existe
+        ruta = os.path.join(data_processed, filename) # Definir la ruta del archivo
+
+        # Guardar CSV
+        df.to_csv(ruta, index=False, encoding="utf-8")
+
+        print(f"Archivo {ruta} creado con éxito ✅") # Mensaje de éxito
+
+        return df
 
 #----------------------------------------------------------------------------------------------------------------------#
 # Metodo #2: Clima Anual.
-    def clima_anual(self, year, lat=10, lon=-84, filename=None):  # Metodo para obtener el clima anual de un lugar especifico (latitud y longitud). CR
-        url = "https://archive-api.open-meteo.com/v1/archive"  # URL de la API de clima historico.
+    def clima_anual(self, year, lat=10, lon=-84, filename=None):
 
-        params = {  # Parametros para la peticion a la API.
+        url = "https://archive-api.open-meteo.com/v1/archive"
+
+        params = {
             "latitude": lat,
             "longitude": lon,
             "start_date": f"{year}-01-01",
@@ -50,42 +66,30 @@ class ClienteAPI():  # Creamos la clase.
             "timezone": "auto"
         }
 
-        # Petición al API
-        response = requests.get(url, params=params)  # Hacemos la peticion a la API con los parametros.
-        data = response.json()  # Convertimos la respuesta a formato JSON.
+        response = requests.get(url, params=params)
+        data = response.json()
 
-        # Extraer datos diarios
-        days = data["daily"]["time"]  # Fechas
-        tmax = data["daily"]["temperature_2m_max"]  # Temperatura maxima
-        tmin = data["daily"]["temperature_2m_min"]  # Temperatura minima
-        rain = data["daily"]["precipitation_sum"]  # Precipitacion
-
-        # DataFrame con los datos
         df = pd.DataFrame({
-            "date": days,
-            "temp_max": tmax,
-            "temp_min": tmin,
-            "rain_mm": rain
+            "date": data["daily"]["time"],
+            "temp_max": data["daily"]["temperature_2m_max"],
+            "temp_min": data["daily"]["temperature_2m_min"],
+            "rain_mm": data["daily"]["precipitation_sum"]
         })
 
-        # Columna temperatura promedio
         df["temp_avg"] = (df["temp_max"] + df["temp_min"]) / 2
 
-        # Nombre del CSV
         if filename is None:
             filename = f"clima_anual_{year}.csv"
 
-        carpeta = 'data/processed'  # Aqui definimos donde va a ir guardado este csv
-        os.makedirs(carpeta, exist_ok=True)  # Si la carpeta no existe, la crea.
+        os.makedirs(data_processed, exist_ok=True)
+        ruta = os.path.join(data_processed, filename)
 
-        ruta = os.path.join(carpeta, filename)  # Se une la carpeta mas el nombre del csv.
-
-        df.to_csv(ruta, index=False)  # Guardar CSV
-        print(f"Archivo {ruta} creado con éxito ✅")  # Mensaje de que se creo el csv y lo envio a la ruta.
+        df.to_csv(ruta, index=False, encoding="utf-8")
+        print(f"Archivo {ruta} creado con éxito ✅")
 
         return df
 
-#----------------------------------------------------------------------------------------------------------------------#
+    #----------------------------------------------------------------------------------------------------------------------#
 # Metodo #3: Clima por años (2013 - 2024)- (Se crea para que se pueda realizar la variable de entrada).
     def clima_rango_anios(self, inicio, fin, lat=10, lon=-84, filename='clima_resumen_anual.csv'):  # Metodo para obtener el clima anual de un lugar especifico (latitud y longitud) en un rango de años. 2013/2024
 
@@ -125,10 +129,8 @@ class ClienteAPI():  # Creamos la clase.
 
         df = pd.DataFrame(resumen)  # Creamos el DataFrame con el resumen anual.
 
-        carpeta = 'data/processed'  # Aqui definimos donde va a ir guardado este csv
-        os.makedirs(carpeta, exist_ok=True)  # Si la carpeta no existe, la crea.
-
-        ruta = os.path.join(carpeta, filename)  # Se une la carpeta mas el nombre del csv.
+        os.makedirs(data_processed, exist_ok=True)
+        ruta = os.path.join(data_processed, filename)
 
         df.to_csv(ruta, index=False, encoding="utf-8")  # Guardar CSV
         print(f"Archivo '{ruta}' creado con éxito ✅")  # Mensaje de que se creo el csv y lo envio a la ruta.
