@@ -1,156 +1,125 @@
-# Importamos las librerías necesarias.
-import pandas as pd # Maneja datos (DataFrames).
-import numpy as np #Cálculos lógicos y matemáticos sobre cuadros y matrices
-import os  # Manejar rutas de archivos.
+# Importamos algunas librerias.
+import pandas as pd # Manipulacion de datos
+import numpy as np # Operaciones numericas
+import os # Manejo de rutas y archivos
+import unicodedata # Normalizacion de texto
+import re # Expresiones regulares
+
+base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")) # Directorio base del proyecto
+data_processed = os.path.join(base_dir, "data", "processed") # Ruta para guardar los datos procesados
 
 #----------------------------------------------------------------------------------------------------------------------#
-# Iniciamos la clase.
-class ProcesadorEDA:  # Creamos la clase ProcesadorEDA la cual nos ayudara a realizar un analisis EDA.
-    def __init__(self, DF_Turismo=pd.DataFrame()):  # Realizamos el constructor.
-        self.__DF_Turismo = DF_Turismo  # Aqui tenemos nuestro atributo privado que almacena el DataFrame.
-        self.__num_filas = DF_Turismo.shape[0]  # Aqui tenemos nuestros atributos privados que almacenan el numero de filas y columnas.
-        self.__num_columnas = DF_Turismo.shape[1]
 
-    # Creamos los propertys (getters) para acceder a los atributos privados.
-    @property
-    def DF_Turismo(self):
-        return self.__DF_Turismo
+class ProcesadorEDA: # Clase para realizar EDA en DataFrames de pandas.
+    def __init__(self, df: pd.DataFrame): # Constructor de la clase.
+        if df.empty: # Si el DataFrame esta vacio.
+            raise ValueError("❌ El DataFrame está vacío al iniciar ProcesadorEDA") # Validacion de DataFrame vacio.
+        self.df = df.copy() # Copia del DataFrame para evitar modificar el original.
 
-    @property
-    def num_filas(self):
-        return self.__num_filas
+#----------------------------------------------------------------------------------------------------------------------#
+# Metodo #1: Informacion general de los csv.
+    def informacion(self):
+        print("📊 Información general del dataset")
+        print(self.df.head()) # Muestra las primeras filas del DataFrame.
+        print(self.df.info()) # Muestra informacion del DataFrame.
 
-    @property
-    def num_columnas(self):
-        return self.__num_columnas
-
-    # Creamos los setters para que podamos modificar los atributos privados si es necesario.
-    @DF_Turismo.setter
-    def DF_Turismo(self, DF_Turismo):
-        self.__DF_Turismo = DF_Turismo
-
-    @num_filas.setter
-    def num_filas(self, num_filas):
-        self.__num_filas = num_filas
-
-    @num_columnas.setter
-    def num_columnas(self, num_columnas):
-        self.__num_columnas = num_columnas
-
-#-------------------------------------------------------------------------------------------------------------------#
-# Iniciamos con la agregacion de metodos que necesitaremos para el analisis EDA.
-# 1. Metodo en el cual obtendremos informacion general del Dataset que se nos a proporcionado.
-    def informacion_turismo_cr(self):
-        print("Informacion general del dataset")
-        print(f"Primeros 5 registros del data set: \n{self.__DF_Turismo.head()}")
-        print(f"Informacion general del dataset: \n{self.__DF_Turismo.info()}")
-        print(f"Estadistica basica del dataset{self.__DF_Turismo.describe()}")
-
-#-------------------------------------------------------------------------------------------------------------------#
-# 2. Metodo con el que podremos limpiar textos ya sea el nombre de los paises.
+#----------------------------------------------------------------------------------------------------------------------#
+# Metodo #2: Limpiamos el texto de los csv.
     def limpiar_texto(self):
-        columnas_texto = self.__DF_Turismo.select_dtypes(
-            include=['object', 'category']).columns  # Selecciona las columnas de tipo texto.
+        self.df.columns = ( # Limpiamos los nombres de las columnas
+            self.df.columns
+            .astype(str)
+            .map(lambda x: unicodedata.normalize("NFKD", x))
+            .map(lambda x: x.encode("ascii", "ignore").decode("utf-8"))
+            .str.replace(r"[^A-Za-z0-9_ ]", "", regex=True)
+            .str.strip()
+            .str.upper()
+        )
 
-        for columna in columnas_texto:
-            self.__DF_Turismo[columna] = (self.__DF_Turismo[columna].astype(str).apply(
-                lambda x: x.encode('utf-8', 'ignore').decode('utf-8', 'ignore')))  # Asegura que los datos sean de tipo string.
+        columnas_texto = self.df.select_dtypes(include="object").columns # Seleccionamos las columnas de tipo texto
 
-        print('El texto se ha limpiado correctamente')
-#-------------------------------------------------------------------------------------------------------------------#
-# 3. Metodo en el cual obtendremos aquellos datos nulos.
+        for col in columnas_texto: # Limpiamos cada columna de texto
+            self.df[col] = (
+                self.df[col]
+                .fillna("")
+                .astype(str)
+                .map(lambda x: unicodedata.normalize("NFKD", x))
+                .map(lambda x: x.encode("ascii", "ignore").decode("utf-8"))
+                .str.replace(r"[^A-Za-z0-9 ]", "", regex=True)
+                .str.strip()
+                .str.upper()
+            )
+
+        print("✅ Textos limpios correctamente")
+
+#----------------------------------------------------------------------------------------------------------------------#
+# Metodo #3: Este metodo nos ayudara ha saber si existen datos nulos, y al tener que realizar un MODELO ML dejaremos que los NaN sean imputados.
     def datos_nulos(self):
-        total_nulos = self.__DF_Turismo.isnull().sum().sum() # Suma total de datos nulos en el DataFrame
-
-        if total_nulos == 0: # Si no hay datos nulos
-            print('No se encontraron datos nulos en el dataset')
+        total = self.df.isnull().sum().sum() # Contamos el total de datos nulos
+        if total == 0: # Si no hay datos nulos
+            print("✅ No existen datos nulos")
         else: # Si hay datos nulos
-            print('El dataset contiene datos nulos por columna:')
-            print(self.__DF_Turismo.isnull().sum()) # Imprime la cantidad de datos nulos por columna
+            print("⚠️ Nulos por columna:")
+            print(self.df.isnull().sum()) # Mostramos los datos nulos por columna
 
-    # Dentro de este segundo metodo tendremos 2 metodos que ayuden a eliminar o imputar los datos nulos.
-    # Eliminar los datos nulos.
-    #def eliminar_datos_nulos(self):
-        #self.__DF_Turismo.dropna(inplace=True)
-        #print('Los datos nulos han sido eliminados')
 
-    # Imputar los datos nulos (utilizar la media para los numericos y la moda para las categoricas). # Mejor opcion para que se pueda realizar el Modelo ML.
-    def imputar_datos_nulos(self):
-        total_nulos = self.__DF_Turismo.isnull().sum().sum() # Total de datos nulos en el DataFrame.
-
-        if total_nulos == 0: # Si no hay datos nulos.
-            print('No es necesario imputar: no existen datos nulos')
+    def imputar_datos_nulos(self): # Imputacion de datos nulos
+        if self.df.isnull().sum().sum() == 0: # Si no hay datos nulos
+            print("✅ No es necesario imputar")
             return
 
-        for columna in self.__DF_Turismo.columns: # Iterar sobre cada columna del DataFrame.
-            if self.__DF_Turismo[columna].dtype in [np.float64, np.int64]: # Si la columna es numérica.
-                self.__DF_Turismo[columna].fillna( # Imputar con la media.
-                    self.__DF_Turismo[columna].mean(),
-                    inplace=True
-                )
-            else: # Si la columna es categórica.
-                self.__DF_Turismo[columna].fillna( # Imputar con la moda.
-                    self.__DF_Turismo[columna].mode()[0],
-                    inplace=True
-                )
-        print('Los datos nulos han sido imputados correctamente')
+        for col in self.df.columns: # Imputamos los datos nulos
+            if self.df[col].dtype in ["float64", "int64"]: # Si la columna es numerica
+                self.df[col].fillna(self.df[col].mean(), inplace=True) # Imputamos con la media
+            else: # Si la columna es de texto
+                self.df[col].fillna(self.df[col].mode()[0], inplace=True) # Imputamos con la moda
 
-#-------------------------------------------------------------------------------------------------------------------#
-# 4. Metodo en cual podremos obtener los valores duplicados.
-    def datos_duplicados(self):
-        print('Este dataset tiene los siguientes datos duplicados: \n')
-        print(self.__DF_Turismo.duplicated().sum())
-
-    # Ese metodo nos da el numero de filas duplicadas, en este nuevo metodo vamos a eliminar esos datos duplicados.
-    def eliminar_datos_duplicados(self):
-        self.__DF_Turismo.drop_duplicates(inplace=True)
-        print('Los datos duplicados del dataset han sido eliminados correctamente')
-
-#-------------------------------------------------------------------------------------------------------------------#
-# 5. Metodo con el que vamos a corregir la columna 'Column1' por 'Años'.
-    def colum_anios(self): # CSV turismo_anios.csv
-        self.__DF_Turismo.rename(columns={'Column1': 'Años'}, inplace=True)
-        print("La columna 'Column1' ha sido renombrada a 'Años' correctamente")
+        print("✅ Datos nulos imputados correctamente")
 
 #----------------------------------------------------------------------------------------------------------------------#
- # 8. Metodo para poder guardar nuestros csvs limpios y guardarlos en la carpeta processed.
-    def csv_limpio_turismo(self, ruta_guardar_csv='data/processed/turismo_anios_clean.csv'):
-        carpeta = os.path.dirname(ruta_guardar_csv)  # Obtenemos la carpeta del path proporcionado.
-        os.makedirs(carpeta, exist_ok=True)  # Creamos la carpeta si no existe.
-        self.__DF_Turismo.to_csv(ruta_guardar_csv, index=False)  # Guardamos el DataFrame como un archivo CSV.
-        print('El Dataset limpio se a guardado en la ruta:', {ruta_guardar_csv})
-
-    def csv_limpio_zonas(self, ruta_guardar_csv='data/processed/zonas_aereas_clean.csv'):
-        carpeta = os.path.dirname(ruta_guardar_csv)  # Obtenemos la carpeta del path proporcionado.
-        os.makedirs(carpeta, exist_ok=True)  # Creamos la carpeta si no existe.
-        self.__DF_Turismo.to_csv(ruta_guardar_csv, index=False)  # Guardamos el DataFrame como un archivo CSV.
-        print('El Dataset limpio se a guardado en la ruta:', {ruta_guardar_csv})
+# Metodo #4: Nos ayuda a eliminar los datos duplicados.
+    def eliminar_duplicados(self):
+        dup = self.df.duplicated().sum() # Contamos los duplicados
+        if dup == 0: # Si no hay duplicados
+            print("✅ No hay duplicados")
+        else: # Si hay duplicados
+            self.df.drop_duplicates(inplace=True)
+            print(f"✅ {dup} duplicados eliminados")
 
 #----------------------------------------------------------------------------------------------------------------------#
-# 9. Metodo para realizar la limpieza general de los datasets.
-    def ejecutar_eda_turismo(self):
-        print("🔍 Iniciando ProcesadorEDA...\n")
+# Metodo #5: Corrige la columa annios del csv turismo.
+    def columna_anios(self):
+        for col in self.df.columns: # Recorremos las columnas
+            col_norm = (
+                unicodedata.normalize("NFKD", col) # Normalizamos el nombre de la columna
+                .encode("ascii", "ignore") # Eliminamos acentos
+                .decode("utf-8") # Decodificamos a utf-8
+                .strip() # Eliminamos espacios en blanco
+                .upper() # Convertimos a mayusculas
+            )
 
-        self.informacion_turismo_cr()
+            if col_norm in ["COLUMN1", "ICOLUMN1", "ANNIOS", "ANIOS"]: # Posibles nombres de la columna AÑOS
+                self.df.rename(columns={col: "ANNIOS"}, inplace=True) # Renombramos la columna a AÑOS
+                print("✅ Columna AÑOS corregida")
+                return
+
+#----------------------------------------------------------------------------------------------------------------------#
+# Metodo #6: Guarada los csv.
+    def guardar_csv(self, nombre): # Guarda el DataFrame en un archivo CSV
+        os.makedirs(data_processed, exist_ok=True) # Creamos el directorio si no existe
+        ruta = os.path.join(data_processed, nombre) # Ruta completa del archivo
+        self.df.to_csv(ruta, index=False, encoding="utf-8") # Guardamos el DataFrame en un archivo CSV
+        print(f"CSV guardado en: {ruta}")
+
+#----------------------------------------------------------------------------------------------------------------------#
+# Metodo #7: Ejecutar EDA (metodos)
+    def ejecutar_eda(self, archivo_salida):
+        print("🔍 Iniciando EDA...\n")
+        self.informacion()
+        self.columna_anios()
         self.limpiar_texto()
         self.datos_nulos()
         self.imputar_datos_nulos()
-        self.datos_duplicados()
-        self.eliminar_datos_duplicados()
-        self.colum_anios()
-        self.csv_limpio_turismo()
-
-        print('Proceso EDA finalizado correctamente ✅ ')
-
-    def ejecutar_eda_zonas(self):
-        print("🔍 Iniciando ProcesadorEDA...\n")
-
-        self.informacion_turismo_cr()
-        self.limpiar_texto()
-        self.datos_nulos()
-        self.imputar_datos_nulos()
-        self.datos_duplicados()
-        self.eliminar_datos_duplicados()
-        self.csv_limpio_zonas()
-
-        print('Proceso EDA finalizado correctamente ✅ ')
+        self.eliminar_duplicados()
+        self.guardar_csv(archivo_salida)
+        print("✅ Proceso EDA finalizado")
