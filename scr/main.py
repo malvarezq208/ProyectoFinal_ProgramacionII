@@ -30,7 +30,7 @@ eda_zonas = eda(zonas.df)
 eda_zonas.ejecutar_eda('zonas_aereas_clean.csv')
 
 #----------------------------------------------------------------------------------------------------------------------#
-#Ejecucion base datos
+#Ejecucion base datos(Actualizacion)
 
 #----------------------------------------------------------------------------------------------------------------------#
 #Carga de los archivos CSV processed
