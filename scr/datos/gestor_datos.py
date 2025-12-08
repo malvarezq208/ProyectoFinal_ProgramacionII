@@ -119,3 +119,29 @@ class GestorDatos: #Definicion clase GestorDatos de CSV de la carpeta data-raw
             print("---------------------------------------------------------------------------------------------------\n")
 
         return
+<<<<<<< Updated upstream
+=======
+
+    def retornar_csv(self):
+        self.deteccion_archivo()  # Asegura que los parámetros estén definidos
+
+        # Leer el encabezado para contar columnas válidas
+        # strip()= Elimina espacios en blanco al principio y final de la cadena de texto
+        # split()= Divide una cadena de texto en partes
+        with open(self.__ruta_archivo) as f:
+            encabezado = f.readline().strip().split(self.separador)
+            self.__columnas_validas = [col for col in encabezado if col]  # Eliminar vacíos
+
+            # Leer el archivo con los parámetros detectados tomados del metodo deteccion_archivo()
+            self.__df = pd.read_csv(
+                self.__ruta_archivo,
+                sep=self.__separador,
+                decimal=self.__decimal,
+                usecols=self.__columnas_validas,  # Especifica las columnas que se desean cargar
+                skiprows=1,  # omite la primera fila del archivo csv
+                names=self.__columnas_validas  # Asigna nombres a las columnas
+            )
+
+        return self.__df
+
+>>>>>>> Stashed changes
