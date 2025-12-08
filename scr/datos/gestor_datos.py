@@ -123,9 +123,7 @@ class GestorDatos: #Definicion clase GestorDatos de CSV de la carpeta data-raw
     def retornar_csv(self):
         self.deteccion_archivo()  # Asegura que los parámetros estén definidos
 
-        # Leer el encabezado para contar columnas válidas
-        # strip()= Elimina espacios en blanco al principio y final de la cadena de texto
-        # split()= Divide una cadena de texto en partes
+
         with open(self.__ruta_archivo) as f:
             encabezado = f.readline().strip().split(self.separador)
             self.__columnas_validas = [col for col in encabezado if col]  # Eliminar vacíos
